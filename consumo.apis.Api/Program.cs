@@ -1,44 +1,53 @@
+using consumo.apis.Application.UseCases;
+using consumo.apis.Domain.Ports;
+using consumo.apis.Infrastructure.HttpClients;
+using consumo.apis.Infrastructure.Repositories;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Add services to the container
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Consumo APIs - JSONPlaceholder",
+        Version = "v1",
+        Description = "API para consumir datos desde JSONPlaceholder usando arquitectura hexagonal"
+    });
+});
+
+// Registrar controladores
+builder.Services.AddControllers();
+
+// Registrar HttpClient para JSONPlaceholder
+builder.Services.AddHttpClient<JsonPlaceholderClient>();
+
+// Registrar Puertos (Interfaces del Dominio)
+builder.Services.AddScoped<IPostRepository, PostRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+
+// Registrar Casos de Uso (Aplicaci�n)
+builder.Services.AddScoped<IGetPostsUseCase, GetPostsUseCase>();
+builder.Services.AddScoped<IGetUsersUseCase, GetUsersUseCase>();
+builder.Services.AddScoped<IGetCommentsUseCase, GetCommentsUseCase>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Consumo APIs v1");
+    });
 }
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+// Mapear controladores
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
